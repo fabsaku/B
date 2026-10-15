@@ -34,11 +34,19 @@ fi
 
 # Let yt-dlp use Node.js as its JS runtime for YouTube.
 YTDLP_CONFIG="$HOME/.config/yt-dlp/config"
+mkdir -p "$(dirname "$YTDLP_CONFIG")"
 if ! grep -q -- '--js-runtimes' "$YTDLP_CONFIG" 2>/dev/null; then
-  mkdir -p "$(dirname "$YTDLP_CONFIG")"
   echo "--js-runtimes node" >> "$YTDLP_CONFIG"
+fi
+# YouTube asks cloud IPs to "sign in to confirm you're not a bot" on the
+# default clients; the embedded and mobile-web clients still return
+# metadata and subtitles without cookies.
+if ! grep -q -- '--extractor-args' "$YTDLP_CONFIG" 2>/dev/null; then
+  echo '--extractor-args "youtube:player_client=web_embedded,mweb"' >> "$YTDLP_CONFIG"
 fi
 
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo "export PATH=\"$BIN:\$PATH\"" >> "$CLAUDE_ENV_FILE"
+  # Node's fetch ignores HTTPS_PROXY unless asked; mcporter (Exa) needs it.
+  echo "export NODE_USE_ENV_PROXY=1" >> "$CLAUDE_ENV_FILE"
 fi
